@@ -1,7 +1,9 @@
+
 import json
 import math
-import os 
+import os
 import discord
+import csv
 Intents = discord.Intents(messages=True, guilds=True,message_content=True,)
 client = discord.Client(intents=Intents)
 white_list = ['539596142002962442', '245387424748929024', '137267493776392194' , '246015579880685568', '498682085951930388' ,'183007580824666112', '244201502967595010','260254296795381760','258189519956738048']
@@ -13,22 +15,7 @@ white_list = ['539596142002962442', '245387424748929024', '137267493776392194' ,
 async def on_ready():
     print("Logged in as a bot {0.user}".format(client))
 #tells me the bot loads.
-global shipnumber_creation
-global shipnames 
-global up_down
-global left_up_right_down
-global right_up_left_down
-global faction  
-global s
-global r
-global q
-global x
-global y
-global maxa 
-global destroyed
-global update_message 
-global last_command
-
+#C:/Users/hyl10/Desktop/Gatewalkers - Liberation/Combat Maps/Map Generation/ShipPos.csv
 
 shipnumber_creation = -1
 shipnumber_indentification = -1
@@ -53,12 +40,11 @@ destroyed = []
 
 update_message = 'Acceleration applied, momentum ==: '
 messagecontent = 'placeholder'
-csv_string =''
 #update_message == where I construct the messages to be put in discord, messagecontent == just the content of the message its looking at,
 # because ToLowerCase doesn't work with message.content
 #csv_string houses the string of commands that are passed to dark
 arrow_array_list = ['⇑', '⇗', '⇘', '⇓', '⇙', '⇖']
-
+csv_string = ''
 last_command = 0
 #Tells me how I should update the CSV file for Dark
 
@@ -95,7 +81,7 @@ def Use_relevant_momentum (relevant_momentum,relevant_arrow_1,relevant_arrow_2):
     update_message = update_message + ' ' + relevant_arrow_1 + str(relevant_momentum[shipnumber_indentification])
 
   if((relevant_momentum[shipnumber_indentification]) < 0) :
-    update_message = update_message + " " + relevant_arrow_2 + + abs(int(relevant_momentum[shipnumber_indentification]))
+    update_message = update_message + " " + relevant_arrow_2 + str(abs(int(relevant_momentum[shipnumber_indentification])))
 
   #The above part runs through every direction, and if its > 0 it adds it to the message.
 
@@ -117,7 +103,7 @@ def Extract_relevant_momentum():
     applied_speed +=  int((messagecontent[messagecontent.find('⇘'): messagecontent.find('⇘') + 3])[1])
 
   if('⇙' in messagecontent):
-    applied_speed +=  int((messagecontent[messagecontent.find('⇙'): messagecontent.find('⇘') + 3])[1])
+    applied_speed +=  int((messagecontent[messagecontent.find('⇙'): messagecontent.find('⇙') + 3])[1])
 
   if('⇖' in messagecontent):
     applied_speed +=  int((messagecontent[messagecontent.find('⇖'): messagecontent.find('⇖') + 3])[1])
@@ -162,7 +148,7 @@ def Extract_relevant_momentum():
   
 
 #This looks at the acceleration order and uses string and index to extract momentum.
-#The way the string mess works == that the first string looks through the entire message for where the arrow ==, then takes that and the next 2 characters.
+#The way the string mess works == that the first string looks through the entire message for where the arrow is then takes that and the next 2 characters.
 #That == then run through a string that takes the numbers and ignores the arrow.
 
 def Update_Position():
@@ -193,14 +179,16 @@ def Find_Called_Ship ():
   global shipnumber_indentification
   shipfound = 0
   shipnumber_indentification = 0
-  while(shipfound == 0 and shipnumber_indentification < (len(shipnames))):
-    if messagecontent.find(shipnames[shipnumber_indentification]) > -1 :
+  length = len(shipnames)
+  while(shipfound == 0 and shipnumber_indentification <= length ) :
+    if shipnames[shipnumber_indentification] in messagecontent:
       shipfound = 1
       print('ship found! Ship is ' + shipnames[shipnumber_indentification])
     
     else :
-      shipnumber_indentification +1
+      shipnumber_indentification += 1
       print('still searching for ship')
+      print(length)
     
   
 
@@ -208,8 +196,11 @@ def Update_Backups ():
   backup_string = [shipnames,left_up_right_down,up_down,right_up_left_down,q,r,s,maxa,destroyed,faction]
   with open('GatewalkerBackupStats.JSON', 'w') as json_file:
     json.dump(backup_string, json_file)
+  with open('C:/Users/hyl10/Desktop/Gatewalkers - Liberation/Combat Maps/Map Generation/csv_backup.csv', 'w', encoding='UTF8') as csv_file:
+    writer = csv.writer(csv_file)
+    writer.writerow([csv_string])
 
-#This searches through a given message to find what ship the message == refering to.
+#This searches through a given message to find what ship the message is refering to.
 
 @client.event
 async def on_message(message):
@@ -227,15 +218,15 @@ async def on_message(message):
   global maxa 
   global destroyed
   global update_message 
+  global csv_string
+
 
   if message.author == client.user:
     return
   global messagecontent
   messagecontent = (message.content).lower()
   print('message content is' + message.content)
-  print('test')
-  await message.channel.send('Message recieved')
- 
+  print('test') 
 
 #######################
 ######/Action Commands#########
@@ -258,7 +249,6 @@ async def on_message(message):
    global destroyed
    global update_message 
    global last_command
-
    last_command = 1
    print('ship added')
    shipnumber_creation = shipnumber_creation + 1
@@ -275,7 +265,12 @@ async def on_message(message):
    #Easter_Egg_Manager()
    update_message = 'The ' + shipnames[shipnumber_creation] + ' has joined the fleet!'
    await message.channel.send(update_message)
-     #This == the add ship command. It replaces all the data in that row with baseline, then checks if an easter egg == applicable, sends the message, and updates the CSV and the bot.
+   csv_string += 'add,' + faction[shipnumber_creation] + ',' + shipnames[shipnumber_creation] + ',' + str(x[shipnumber_creation]) + ',' + str(y[shipnumber_creation]) + '\n'
+   with open('C:/Users/hyl10/Desktop/Gatewalkers - Liberation/Combat Maps/Map Generation/ShipPos.csv', 'w', encoding='UTF8', newline= '\n') as csv_file:
+     writer = csv.writer(csv_file)
+     writer.writerow([csv_string])
+   exec(open("MapRunner.py").read())
+     #This is the add ship command. It replaces all the data in that row with baseline, then checks if an easter egg == applicable, sends the message, and updates the CSV and the bot.
   
 
   if 'acceleration order' in messagecontent:
@@ -294,10 +289,18 @@ async def on_message(message):
         print('Update position has been reached')
         if messagecontent != 'second': Update_Position()
         if(update_message == "Acceleration applied, momentum is ") : update_message = 'Acceleration applied, ship is stationary.'
+        else:
+           csv_string += 'mov,' + str(shipnames[shipnumber_indentification]) + ',' + str(q[shipnumber_creation]) + ',' + str(r[shipnumber_creation]) + ',' + str(s[shipnumber_creation]) + '\n'
+           with open('C:/Users/hyl10/Desktop/Gatewalkers - Liberation/Combat Maps/Map Generation/ShipPos.csv', 'w', encoding='UTF8', newline= '\n') as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerow([csv_string])
+
+        
 
   
     else: update_message = 'Error: ship is inoperable.'
     await message.channel.send(update_message)
+    exec(open("MapRunner.py").read())
     #This first finds the called ship, runs extrat momentum, and if it hasn not exceeded
   
 
@@ -308,6 +311,11 @@ async def on_message(message):
     print(destroyed[shipnumber_indentification])
     update_message = shipnames[shipnumber_indentification] + ' has been destroyed. Prepare for a long meeting with Epsilone.'
     await message.channel.send(update_message)
+    csv_string += "del," + shipnames[shipnumber_indentification] + '\n'
+    with open('C:/Users/hyl10/Desktop/Gatewalkers - Liberation/Combat Maps/Map Generation/ShipPos.csv', 'w', encoding='UTF8', newline= '\n') as csv_file:
+      writer = csv.writer(csv_file)
+      writer.writerow([csv_string])
+    exec(open("MapRunner.py").read())
 
 #Just destroys the ship listed. Pretty simple.
 
@@ -323,7 +331,7 @@ async def on_message(message):
     if update_message == 'Momentum of ' + shipnames[shipnumber_indentification] + ' is ' :
       update_message = 'The ' + shipnames[shipnumber_indentification] + ' is stationary.'   
     await message.channel.send(update_message)
-  
+
   if 'query position' in messagecontent :
     Find_Called_Ship()
     update_message = 'Position of ' + shipnames[shipnumber_indentification] + ' is '
@@ -335,14 +343,13 @@ async def on_message(message):
     print ('query position: X is '+ str(x[shipnumber_indentification]) + ', y is ' + str(y[shipnumber_indentification]))
     update_message = update_message + 'x:'+ str(x[shipnumber_indentification]) + ' y:' + str(y[shipnumber_indentification])
     await message.channel.send(update_message)
-  
 
   if 'query ships' in messagecontent :
     update_message = 'The ships are: ' + str([shipnames])
     await message.channel.send(update_message)
 
   if 'command list' == messagecontent :
-    update_message = 'Add ship: adds ship to combat engagement. \n Format: "add ship [shipname] P:([starting x],[starting y]) A:[maximum acceleration]". \n';
+    update_message = 'Add ship: adds ship to combat engagement. \n Format: "add ship [shipname] P:([starting x],[starting y]) A:[maximum acceleration]" F:[factiion of ship. Player, Ally, Enemy, or Unknown]. \n';
     update_message = update_message + '\n Acceleration Order: applies stated acceleration to called ship. \n format: acceleration order: [ship name] [arrow followed by number without space] [repeat for all called directions] \n';
     update_message = update_message + '\n Destroy: destroys target ship. \nformat: destroy [shipname] \n';
     update_message = update_message + '\n Query momentum: gives the momentum of the called ship. \n format: Query momentum [shipname] \n';
@@ -379,7 +386,16 @@ async def on_message(message):
     destroyed = backup_string[8]
     faction = backup_string[9]
     if(last_command == 1): shipnumber_creation = shipnumber_creation - 1
+    with open('C:/Users/hyl10/Desktop/Gatewalkers - Liberation/Combat Maps/Map Generation/csv_backup.csv', 'r', encoding='UTF8') as csv_file:
+      reader = csv.reader(csv_file)
+      csv_string = ''
+      for row in reader:
+       csv_string += row
     Update_Backups()
+    with open('C:/Users/hyl10/Desktop/Gatewalkers - Liberation/Combat Maps/Map Generation/ShipPos.csv', 'w', encoding='UTF8', newline= '\n') as csv_file:
+      writer = csv.writer(csv_file)
+      writer.writerow([csv_string])
+    exec(open("MapRunner.py").read())
   
 #This takes the backup files and replaces the existing data from them. Works through any command, including wipe bot memory.
 
@@ -404,8 +420,12 @@ async def on_message(message):
      shipnumber_creation = -1
      shipnumber_indentification = -1
      last_command = 0
-  
+     with open('C:/Users/hyl10/Desktop/Gatewalkers - Liberation/Combat Maps/Map Generation/ShipPos.csv', 'w', encoding='UTF8', newline= '\n') as csv_file:
+      writer = csv.writer(csv_file)
+      writer.writerow([''])
+     exec(open("MapRunner.py").read())
   #This wipes the bot memory, except for the backup files.
+
 
 
 client.run('')
